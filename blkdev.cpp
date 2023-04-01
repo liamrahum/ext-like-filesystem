@@ -47,6 +47,6 @@ void BlockDeviceSimulator::read(int addr, int size, char *ans) {
 }
 
 void BlockDeviceSimulator::write(int addr, int size, const char *data) {
-	memcpy(filemap + addr + 5, data, size); // 5 is for sizeof(header)
+	memcpy(filemap + addr, data, size); // 5 is for sizeof(header)
 }
 

@@ -1,4 +1,5 @@
 #include "myfs.h"
+#include <cstddef>
 #include <string.h>
 #include <iostream>
 #include <math.h>
@@ -26,6 +27,7 @@ MyFs::MyFs(BlockDeviceSimulator *blkdevsim_):blkdevsim(blkdevsim_) {
 		format();
 		std::cout << "Finished!" << std::endl;
 	}
+	//blkdevsim->sizeofHeader = sizeof(header);
 }
 
 void MyFs::format() {
@@ -34,8 +36,9 @@ void MyFs::format() {
 	struct myfs_header header;
 	strncpy(header.magic, MYFS_MAGIC, sizeof(header.magic));
 	header.version = CURR_VERSION;
-	blkdevsim->write(-5, sizeof(header), (const char*)&header);
-
+	//blkdevsim->sizeofHeader = sizeof(header);
+	blkdevsim->write(0, sizeof(header), (const char*)&header);
+	
 	const char table[INODESTABLELEN] = {0};
 	blkdevsim->write(0, INODESTABLELEN, table); //Inodes
 	blkdevsim->write(INODESTABLELEN, INODESTABLELEN, table); //Sizes
@@ -47,7 +50,7 @@ std::map<std::string, int> MyFs::getInodes(int addr)
 {
 	std::map<std::string, int> res;
 	char table[INODESTABLELEN] = {0};
-
+	
 	blkdevsim->read(addr, INODESTABLELEN, table);
 	std::stringstream tableString(table);
 	string currentLine;
@@ -93,7 +96,8 @@ void MyFs::create_file(std::string path_str, bool directory) {
 	int current = 0;
 	for(auto it = blkdevsim->inodes.begin(); it != blkdevsim->inodes.end(); it++)
 	{
-		current = it->second + 1;
+		if(it->second > current)
+			current = it->second + 1;
 	}
 	blkdevsim->inodes[path_str] = current;
 	blkdevsim->sizes[path_str] = 0;
@@ -115,16 +119,21 @@ void MyFs::set_content(std::string path_str, std::string content) {
 
 	int currentSize = blkdevsim->sizes[path_str];
 	int difference = content.length() - currentSize;
+	//std::cout << difference << std::endl;
 	blkdevsim->sizes[path_str] = content.length();
 	int currentInode = blkdevsim->inodes[path_str];
 	for(auto it = blkdevsim->inodes.begin(); it != blkdevsim->inodes.end(); it++)
 		if(it->second > currentInode)
 		{
-			blkdevsim->write(2*INODESTABLELEN + it->second, get_content(it->first).length(), get_content(it->first).c_str());
+			//std::cout << get_content(it->first) << std::endl;
+			blkdevsim->write(2*INODESTABLELEN + it->second + difference, get_content(it->first).length(), get_content(it->first).c_str());
 			it->second += difference;
 		}
-	
+
 	blkdevsim->write(2*INODESTABLELEN+ blkdevsim->inodes[path_str], content.length(), content.c_str());
+
+	setInodes(blkdevsim->inodes, 0);
+	setInodes(blkdevsim->sizes, INODESTABLELEN);	
 
 }
 

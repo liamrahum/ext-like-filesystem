@@ -15,6 +15,7 @@ public:
 	static const int DEVICE_SIZE = 1024 * 1024;
 	std::map<std::string, int> inodes;
 	std::map<std::string, int> sizes;
+	unsigned long sizeofHeader;
 private:
 	int fd;
 	unsigned char *filemap;
